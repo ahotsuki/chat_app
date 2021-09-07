@@ -1,0 +1,11 @@
+@route=http://localhost:3000/api
+
+GET {{route}}/users
+
+###
+
+GET {{route}}/rooms
+
+###
+
+GET {{route}}/messages
