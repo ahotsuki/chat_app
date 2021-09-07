@@ -16,6 +16,9 @@ const messageFormat = require("./utils/message");
 
 // Set static folder
 app.use(express.static(path.join(__dirname, "public")));
+app.use(
+  express.static(path.join(__dirname, "node_modules", "materialize-css"))
+);
 
 // Username of auto-generated messages
 const ADMIN = "Admin";
@@ -142,6 +145,7 @@ io.on("connection", (socket) => {
       .emit("message", messageFormat(ADMIN, `${user.name} has left the chat.`));
 
     // Broadcast configurations to everyone
+    if (!ROOMS[roomIndex]) return;
     let userList = [];
     ROOMS[roomIndex].users.forEach((element) => {
       const index = USERS.findIndex((item) => item.id === element);

@@ -53,11 +53,17 @@ chatForm.addEventListener("submit", (e) => {
 // Output message to DOM
 function outputMessage(message) {
   const div = document.createElement("div");
-  div.classList.add("message");
+  message.username === "You"
+    ? div.setAttribute("class", "message teal darken-4")
+    : div.setAttribute("class", "grey darken-3 message");
   const p = document.createElement("p");
-  p.classList.add("meta");
+  message.username === "You"
+    ? p.setAttribute("class", "meta red-text text-lighten-3")
+    : p.setAttribute("class", "meta deep-purple-text text-lighten-3");
   p.innerText = message.username;
-  p.innerHTML += `<span> at ${message.time}</span>`;
+  p.innerHTML += `<span class="${
+    message.username === "You" ? "orange-text" : "teal-text text-lighten-2"
+  }"> at ${message.time}</span>`;
   div.appendChild(p);
   const para = document.createElement("p");
   para.classList.add("text");
