@@ -3,6 +3,7 @@ const chatForm = document.getElementById("chat-form");
 const chatMessages = document.querySelector(".chat-messages");
 const roomName = document.getElementById("room-name");
 const userList = document.getElementById("users");
+const graphics = document.getElementById("graphics-container");
 
 // Initialize socket for client
 const socket = io();
@@ -24,7 +25,6 @@ socket.on("configurations", ({ name, users }) => {
   roomName.innerText = name;
 
   userList.innerHTML = "";
-  console.log(users);
   users.forEach((user) => {
     const li = document.createElement("li");
     li.innerText = user;
@@ -45,12 +45,59 @@ chatForm.addEventListener("submit", (e) => {
     return false;
   }
 
+  if (msg === "/") {
+    const commands = `
+      <span class="orange-text">/gifs</span> [your search keyword here] <br>
+        - Gives you a list of gifs.
+    `;
+
+    e.target.elements.msg.value = "";
+    e.target.elements.msg.focus();
+    return outputMessage({
+      username: "Chat Bot",
+      time: "System time",
+      content: commands,
+    });
+  }
+
+  if (msg.startsWith("/")) {
+    const msgArr = msg.split(" ");
+    const cmd = msgArr.shift();
+    const query = msgArr.join(" ").trim();
+    e.target.elements.msg.value = "";
+    if (cmd === "/gifs") {
+      // For gif searching
+      socket.emit("search-gifs", query);
+      graphics.classList.remove("no-display");
+      return;
+    } else {
+      return outputMessage({
+        username: "Chat Bot",
+        time: "System time",
+        content: `<span class="red-text">Error:</span> Command <span class="orange-text">"${cmd}"</span> not found.`,
+      });
+    }
+  }
+
   // Emit message to server
   socket.emit("chat-message", msg);
 
   // Clear input
   e.target.elements.msg.value = "";
   e.target.elements.msg.focus();
+});
+
+// Display the list of searched gifs
+socket.on("search-gifs", ({ data }) => {
+  graphics.innerHTML = "";
+  data.forEach((item) => outputGifs(item));
+});
+
+// Manage the graphics div
+document.addEventListener("click", (e) => {
+  if (graphics !== e.target && !graphics.contains(e.target)) {
+    graphics.classList.add("no-display");
+  }
 });
 
 // Output message to DOM
@@ -70,7 +117,22 @@ function outputMessage(message) {
   div.appendChild(p);
   const para = document.createElement("p");
   para.classList.add("text");
-  para.innerText = message.content;
+  para.innerHTML = message.content;
   div.appendChild(para);
   document.querySelector(".chat-messages").appendChild(div);
+}
+
+// Output Gifs to Dom
+function outputGifs(gif) {
+  const img = document.createElement("img");
+  img.src = gif.images.downsized.url;
+  img.setAttribute("alt", gif.title);
+  img.setAttribute("class", "graphics-container-item");
+  img.onclick = () => {
+    const message = `<img src="${gif.images.downsized.url}" alt="${gif.title}" class="graphics-container-item" />`;
+    socket.emit("chat-message", message);
+    graphics.classList.add("no-display");
+    graphics.innerHTML = "";
+  };
+  graphics.appendChild(img);
 }

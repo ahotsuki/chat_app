@@ -12,6 +12,8 @@ const io = socketio(server);
 
 // Helper requires
 const messageFormat = require("./utils/message");
+const DB = require("./db/db");
+const externalApi = require("./db/external");
 
 app.use(express.json());
 
@@ -26,7 +28,26 @@ const ADMIN = "Admin";
 
 // Collections
 let USERS = []; // { id, name, room }
-let ROOMS = []; // { name, password, users: [{id}]}
+let ROOMS = [
+  {
+    name: "Public",
+    password: "",
+    public: true,
+    users: [],
+  },
+  {
+    name: "Educational",
+    password: "",
+    public: true,
+    users: [],
+  },
+  {
+    name: "Gaming",
+    password: "",
+    public: true,
+    users: [],
+  },
+]; // { name, password, public:(true or false), users: [{id}]}
 let MESSAGES = []; // {room, messages:[{ messageFormat }]}
 
 // Api endpoints
@@ -36,6 +57,7 @@ app.get("/api/rooms", (req, res) => {
     list.push({
       name: element.name,
       userCount: element.users.length,
+      public: element.public ? true : false,
     });
   });
   res.send(list);
@@ -59,13 +81,21 @@ app.post("/api/rooms", (req, res) => {
   res.send(format);
 });
 
-// Test endpoints
+// Endpoints for testing purposes
 app.get("/api/get_users", (req, res) => res.send(USERS));
 app.get("/api/get_rooms", (req, res) => res.send(ROOMS));
 app.get("/api/get_messages", (req, res) => res.send(MESSAGES));
 
 // SocketIO connection
 io.on("connection", (socket) => {
+  //For room page
+  socket.on("refresh", () => {
+    socket.join("__refresh_room");
+  });
+
+  //
+  //
+  //
   // When a user joins a room
   socket.on("joinRoom", (user) => {
     // Saves socket id and username to the USERS collection
@@ -122,8 +152,12 @@ io.on("connection", (socket) => {
       name: ROOMS[roomIndex].name,
       users: userList,
     });
+    socket.broadcast.to("__refresh_room").emit("refresh");
   });
 
+  //
+  //
+  //
   // Listen to chat messages
   socket.on("chat-message", (message) => {
     const index = USERS.findIndex((item) => item.id === socket.id);
@@ -146,6 +180,20 @@ io.on("connection", (socket) => {
     socket.broadcast.to(user.room).emit("message", formattedMessage);
   });
 
+  //
+  //
+  //
+  // Listens to command calls
+  socket.on("search-gifs", async (query) => {
+    externalApi.searchGifs(query, (response) => {
+      socket.emit("search-gifs", response.data);
+    });
+    // socket.emit("search-gifs", DB.searchGifs());
+  });
+
+  //
+  //
+  //
   // When a user leaves a room
   socket.on("disconnect", () => {
     const userIndex = USERS.findIndex((item) => item.id === socket.id);
@@ -158,15 +206,15 @@ io.on("connection", (socket) => {
 
     const user = USERS.splice(userIndex, 1)[0];
 
-    if (ROOMS[roomIndex].users.length > 1) {
+    if (ROOMS[roomIndex].users.length && !ROOMS[roomIndex].public) {
+      const r = ROOMS.splice(roomIndex, 1);
+      const index = MESSAGES.findIndex((item) => item.room === r.name);
+      MESSAGES.splice(index, 1);
+    } else {
       const index = ROOMS[roomIndex].users.findIndex(
         (item) => item === user.id
       );
       ROOMS[roomIndex].users.splice(index, 1);
-    } else {
-      const r = ROOMS.splice(roomIndex, 1);
-      const index = MESSAGES.findIndex((item) => item.room === r.name);
-      MESSAGES.splice(index, 1);
     }
 
     socket.broadcast
@@ -184,6 +232,7 @@ io.on("connection", (socket) => {
       name: ROOMS[roomIndex].name,
       users: userList,
     });
+    socket.broadcast.to("__refresh_room").emit("refresh");
   });
 });
 

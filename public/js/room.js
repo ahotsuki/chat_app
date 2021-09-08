@@ -1,4 +1,4 @@
-// if (!window.sessionStorage.getItem("username")) window.location.href = "/";
+if (!window.sessionStorage.getItem("username")) window.location.href = "/";
 
 const roomDisplay = document.getElementById("rooms-collection-display");
 const createRoomName = document.getElementById("create-room-name");
@@ -7,21 +7,28 @@ const createRoomBtn = document.getElementById("create-room-btn");
 const joinRoomPassword = document.getElementById("join-room-password");
 const joinRoomBtn = document.getElementById("join-room-btn");
 
+const socket = io();
+
+socket.emit("refresh");
+socket.on("refresh", (m) => {
+  fetch("/api/rooms")
+    .then((response) => response.json())
+    .then((list) => {
+      roomDisplay.innerHTML = "";
+      list.forEach((element) => outputRoom(element));
+    });
+});
+
 document.addEventListener("DOMContentLoaded", function () {
   const elems = document.querySelectorAll(".modal");
   M.Modal.init(elems);
+  fetch("/api/rooms")
+    .then((response) => response.json())
+    .then((list) => {
+      roomDisplay.innerHTML = "";
+      list.forEach((element) => outputRoom(element));
+    });
 });
-
-fetch("/api/rooms")
-  .then((response) => response.json())
-  .then((list) => {
-    list.forEach((element) => outputRoom(element));
-  });
-
-// window.onunload = () => {
-//   // Clear the local storage
-//   window.sessionStorage.clear();
-// };
 
 createRoomBtn.onclick = () => {
   const data = {
@@ -71,17 +78,21 @@ function outputRoom(item) {
   const li = document.createElement("li");
   li.setAttribute("class", "collection-item avatar");
   li.innerHTML = `
-    <i class="material-icons circle green">person_pin</i>
+    <i class="material-icons circle ${
+      item.public ? "green" : "red"
+    }">person_pin</i>
     <span class="title">${item.name}</span>
     <p>${item.userCount} online users</p>
     <button
         id="${item.name}"
-        onclick="joinRoomClick(this)"
-        data-target="modal-join"
+        onclick="${
+          item.public ? `joinPublicRoom(this)` : "joinRoomClick(this)"
+        }"
+        ${item.public ? "" : `data-target="modal-join"`}
         class="
         secondary-content
         btn
-        modal-trigger
+        ${item.public ? "" : `modal-trigger`}
         btn-small
         teal
         waves-effect waves-light
@@ -96,4 +107,9 @@ function outputRoom(item) {
 function joinRoomClick(e) {
   joinRoomBtn.setAttribute("name", e.id);
   document.getElementById("modal-room-name").innerText = e.id;
+}
+
+function joinPublicRoom(e) {
+  window.sessionStorage.setItem("room", e.id);
+  window.location.href = "/chat.html";
 }
