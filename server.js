@@ -4,7 +4,6 @@ const path = require("path");
 const http = require("http");
 const express = require("express");
 const socketio = require("socket.io");
-const QS = require("query-string");
 
 // Server requires
 const app = express();
@@ -13,6 +12,8 @@ const io = socketio(server);
 
 // Helper requires
 const messageFormat = require("./utils/message");
+
+app.use(express.json());
 
 // Set static folder
 app.use(express.static(path.join(__dirname, "public")));
@@ -25,20 +26,48 @@ const ADMIN = "Admin";
 
 // Collections
 let USERS = []; // { id, name, room }
-let ROOMS = []; // { name, users: [{id}]}
+let ROOMS = []; // { name, password, users: [{id}]}
 let MESSAGES = []; // {room, messages:[{ messageFormat }]}
 
+// Api endpoints
+app.get("/api/rooms", (req, res) => {
+  let list = [];
+  ROOMS.forEach((element) => {
+    list.push({
+      name: element.name,
+      userCount: element.users.length,
+    });
+  });
+  res.send(list);
+});
+app.get("/api/rooms/:name", (req, res) => {
+  const room = req.params.name;
+  const password = req.headers.password;
+  const index = ROOMS.findIndex((item) => item.name === room);
+  if (ROOMS[index].password === password)
+    return res.send({ verified: true, room });
+  res.send({ verified: false, room });
+});
+app.post("/api/rooms", (req, res) => {
+  const room = req.body;
+  const format = {
+    name: room.name,
+    password: room.password,
+    users: [],
+  };
+  ROOMS.push(format);
+  res.send(format);
+});
+
 // Test endpoints
-app.get("/api/users", (req, res) => res.send(USERS));
-app.get("/api/rooms", (req, res) => res.send(ROOMS));
-app.get("/api/messages", (req, res) => res.send(MESSAGES));
+app.get("/api/get_users", (req, res) => res.send(USERS));
+app.get("/api/get_rooms", (req, res) => res.send(ROOMS));
+app.get("/api/get_messages", (req, res) => res.send(MESSAGES));
 
 // SocketIO connection
 io.on("connection", (socket) => {
   // When a user joins a room
-  socket.on("joinRoom", (url) => {
-    const user = QS.parse(url);
-
+  socket.on("joinRoom", (user) => {
     // Saves socket id and username to the USERS collection
     USERS.push({
       id: socket.id,

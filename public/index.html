@@ -28,7 +28,7 @@
         </h1>
       </header>
       <main class="join-main black lighten-5">
-        <form action="chat.html">
+        <div>
           <div class="input-field">
             <input
               type="text"
@@ -39,7 +39,7 @@
             />
             <label for="username" class="active">Username</label>
           </div>
-          <div class="input-field">
+          <!-- <div class="input-field">
             <input
               type="text"
               class="white-text"
@@ -48,14 +48,18 @@
               required
             />
             <label for="room" class="active">Room</label>
-          </div>
-          <button type="submit" class="btn waves-effect waves-light teal">
+          </div> -->
+          <button
+            id="index-submit-btn"
+            class="btn waves-effect waves-light teal"
+          >
             Join Chat
           </button>
-        </form>
+        </div>
       </main>
     </div>
 
+    <script type="text/javascript" src="./js/index.js"></script>
     <!--JavaScript at end of body for optimized loading-->
     <script type="text/javascript" src="/dist/js/materialize.min.js"></script>
   </body>

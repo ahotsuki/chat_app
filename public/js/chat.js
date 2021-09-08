@@ -7,7 +7,10 @@ const userList = document.getElementById("users");
 // Initialize socket for client
 const socket = io();
 
-socket.emit("joinRoom", location.search);
+socket.emit("joinRoom", {
+  username: window.sessionStorage.getItem("username"),
+  room: window.sessionStorage.getItem("room"),
+});
 
 socket.on("message", (message) => {
   outputMessage(message);

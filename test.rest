@@ -1,11 +1,11 @@
 @route=http://localhost:3000/api
 
-GET {{route}}/users
+GET {{route}}/get_users
 
 ###
 
-GET {{route}}/rooms
+GET {{route}}/get_rooms
 
 ###
 
-GET {{route}}/messages
+GET {{route}}/get_messages
