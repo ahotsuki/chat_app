@@ -5,6 +5,14 @@ const roomdb = path.join(__dirname, "rooms.json");
 const usersdb = path.join(__dirname, "users.json");
 const messagesdb = path.join(__dirname, "messages.json");
 
+function getdbs() {
+  return {
+    room: roomdb,
+    user: usersdb,
+    msg: messagesdb,
+  };
+}
+
 function readDB(db) {
   try {
     const data = fs.readFileSync(db);
@@ -127,6 +135,6 @@ module.exports = {
   createMessage,
   getMessage,
   deleteMessageCollection,
+  getdbs,
+  writeDB,
 };
-
-// readDB(giphy);

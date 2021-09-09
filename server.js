@@ -14,7 +14,6 @@ const io = socketio(server);
 const messageFormat = require("./utils/message");
 const DB = require("./db/db");
 const externalApi = require("./db/external");
-const { response } = require("express");
 
 app.use(express.json());
 
@@ -25,7 +24,8 @@ app.use(
 );
 
 // Username of auto-generated messages
-const ADMIN = "Admin";
+const ADMIN = "Chat Bot";
+const RULES = new Map();
 
 // Collections
 // let USERS = []; // { id, name, room }
@@ -124,7 +124,7 @@ io.on("connection", (socket) => {
     socket.emit(
       "message",
       messageFormat(
-        "Chat Bot",
+        ADMIN,
         `Enter <span class="orange-text">"/"</span> for a list of commands.`
       )
     );
@@ -179,7 +179,7 @@ io.on("connection", (socket) => {
   //
   // Listens to command calls
   socket.on("chat-bot-message", (message) => {
-    const formattedMessage = messageFormat("Chat Bot", message);
+    const formattedMessage = messageFormat(ADMIN, message);
     socket.emit("message", formattedMessage);
   });
   socket.on("search-gifs", (query) => {
@@ -199,6 +199,48 @@ io.on("connection", (socket) => {
     externalApi.searchEmojis(query, (data) =>
       socket.emit("search-emojis", data)
     );
+  });
+  socket.on("get-room-rules", () => {
+    const user = DB.getUser(socket.id);
+    const rule = RULES.get(user.room);
+    if (!rule) {
+      const message = `There are currently no rules for this room. <br>
+        Use <span class="orange-text">"/make-rules"</span> to make rules for this rooms.
+      `;
+      const formattedMessage = messageFormat(ADMIN, message);
+      socket.emit("message", formattedMessage);
+      return;
+    }
+    const message =
+      `<span class="orange-text">Room Rules:</span><br>-->` +
+      rule.join(`<br>-->`);
+    const formattedMessage = messageFormat(ADMIN, message);
+    socket.emit("message", formattedMessage);
+  });
+  socket.on("make-room-rules", (query) => {
+    const user = DB.getUser(socket.id);
+    if (typeof RULES.get(user.room) === "undefined") {
+      RULES.set(user.room, [query]);
+    } else {
+      RULES.get(user.room).push(query);
+    }
+    const rule = RULES.get(user.room);
+    const message =
+      `<span class="orange-text">Room Rules:</span><br>-->` +
+      rule.join(`<br>-->`);
+    const formattedMessage = messageFormat(ADMIN, message);
+    socket.emit("message", formattedMessage);
+  });
+  socket.on("delete-room-rules", () => {
+    const user = DB.getUser(socket.id);
+    if (typeof RULES.get(user.room) !== "undefined") {
+      RULES.delete(user.room);
+    }
+    const message = `There are currently no rules for this room. <br>
+        Use <span class="orange-text">"/make-rules"</span> to make rules for this rooms.
+      `;
+    const formattedMessage = messageFormat(ADMIN, message);
+    socket.emit("message", formattedMessage);
   });
 
   //

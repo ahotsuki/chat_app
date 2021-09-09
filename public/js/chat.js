@@ -101,12 +101,32 @@ chatForm.addEventListener("submit", (e) => {
       if (query === "") return socket.emit("get-all-emojis");
       socket.emit("search-emojis", query);
       return;
+    } else if (cmd === "/rules") {
+      if (query !== "")
+        return socket.emit(
+          "chat-bot-message",
+          `<span class="red-text">Error:</span> Command <span class="orange-text">"${cmd}"</span> should not have queries.`
+        );
+      return socket.emit("get-room-rules", query);
+    } else if (cmd === "/make-rules") {
+      if (query === "")
+        return socket.emit(
+          "chat-bot-message",
+          `<span class="red-text">Error:</span> Command <span class="orange-text">"${cmd}"</span> should have a query.`
+        );
+      return socket.emit("make-room-rules", query);
+    } else if (cmd === "/reset-rules") {
+      if (query !== "")
+        return socket.emit(
+          "chat-bot-message",
+          `<span class="red-text">Error:</span> Command <span class="orange-text">"${cmd}"</span> should not have queries.`
+        );
+      return socket.emit("delete-room-rules", query);
     } else {
-      return outputMessage({
-        username: "Chat Bot",
-        time: "System time",
-        content: `<span class="red-text">Error:</span> Command <span class="orange-text">"${cmd}"</span> not found.`,
-      });
+      return socket.emit(
+        "chat-bot-message",
+        `<span class="red-text">Error:</span> Command <span class="orange-text">"${cmd}"</span> not found.`
+      );
     }
   }
 
@@ -131,7 +151,6 @@ socket.on("search-gifs", ({ data }) => {
 // Display the list of searched stickers
 socket.on("search-stickers", (data) => {
   graphics.innerHTML = "";
-  console.log(data);
   if (data.length > 0) {
     data.forEach((item) => outputStickers(item));
     return;

@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon --ignore db/*.json"
+    "db-reset": "node reset-db.js"
   },
   "author": "dev",
   "license": "ISC",
@@ -16,8 +16,5 @@
     "materialize-css": "^1.0.0-rc.2",
     "moment": "^2.29.1",
     "socket.io": "^4.2.0"
-  },
-  "devDependencies": {
-    "nodemon": "^2.0.12"
   }
 }
