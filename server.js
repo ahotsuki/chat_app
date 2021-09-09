@@ -25,7 +25,7 @@ app.use(
 );
 
 // Username of auto-generated messages
-// const ADMIN = "Admin";
+const ADMIN = "Admin";
 
 // Collections
 // let USERS = []; // { id, name, room }
