@@ -1,9 +1,0 @@
-@route=http://localhost:3000/api
-
-POST {{route}}/rooms
-content-type: application/json
-
-{
-    "name": "sample",
-    "password": "sample password"
-}
