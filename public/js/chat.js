@@ -1,6 +1,7 @@
 // Get elements in DOM
 const chatForm = document.getElementById("chat-form");
 const chatMessages = document.querySelector(".chat-messages");
+const chatInput = document.getElementById("msg");
 const roomName = document.getElementById("room-name");
 const userList = document.getElementById("users");
 const graphics = document.getElementById("graphics-container");
@@ -8,11 +9,17 @@ const graphics = document.getElementById("graphics-container");
 // Initialize socket for client
 const socket = io();
 
+// Displays the username to the DOM
+document.getElementById("chat-room-uname-display").innerText =
+  window.sessionStorage.getItem("username");
+
+// Once a user enters chat.html, user sends its credentials to be recorded by the server
 socket.emit("joinRoom", {
   username: window.sessionStorage.getItem("username"),
   room: window.sessionStorage.getItem("room"),
 });
 
+// An event to output every messages received to the chatbox
 socket.on("message", (message) => {
   outputMessage(message);
 
@@ -26,9 +33,8 @@ socket.on("configurations", ({ name, users }) => {
 
   userList.innerHTML = "";
   users.forEach((user) => {
-    const li = document.createElement("li");
-    li.innerText = user;
-    userList.appendChild(li);
+    // <span class="orange-text"><i> is Typing...</i></span>
+    userList.innerHTML += `<li id="user-list-${user}" style="font-weight:bold;">${user}</li>`;
   });
 });
 
@@ -41,10 +47,12 @@ chatForm.addEventListener("submit", (e) => {
 
   msg = msg.trim();
 
+  // Cancel operation if the user sends null
   if (!msg) {
     return false;
   }
 
+  // Checks if message is a command query
   if (msg === "/") {
     const commands = `
       <span class="orange-text">/gifs</span> <span class="blue-text text-lighten-4">[your search keyword here]</span> <br>
@@ -55,17 +63,21 @@ chatForm.addEventListener("submit", (e) => {
       - Gives you a list of emojis. <br>
       <span class="orange-text">/emojis</span> <span class="blue-text text-lighten-4">[your search keyword here]</span> <br>
       - Search a list of emojis with your keyword. <br>
+      <span class="orange-text">/rules</span> <br>
+      - Display the rules of the room. <br>
+      <span class="orange-text">/make-rules</span> <span class="blue-text text-lighten-4">[your rule here]</span> <br>
+      - Add a rule to the room's rule list. <br>
+      <span class="orange-text">/reset-rules</span> <br>
+      - Deletes all rules of the room. <br>
     `;
 
     e.target.elements.msg.value = "";
     e.target.elements.msg.focus();
-    return outputMessage({
-      username: "Chat Bot",
-      time: "System time",
-      content: commands,
-    });
+    // Sends a list of commands and return
+    return socket.emit("chat-bot-message", commands);
   }
 
+  // Checks for commands by the user
   if (msg.startsWith("/")) {
     const msgArr = msg.split(" ");
     const cmd = msgArr.shift();
@@ -117,8 +129,9 @@ socket.on("search-gifs", ({ data }) => {
 });
 
 // Display the list of searched stickers
-socket.on("search-stickers", ({ data }) => {
+socket.on("search-stickers", (data) => {
   graphics.innerHTML = "";
+  console.log(data);
   if (data.length > 0) {
     data.forEach((item) => outputStickers(item));
     return;
@@ -146,7 +159,7 @@ socket.on("search-emojis", (data) => {
 
 // Outputs emoji to chat box
 function displayEmoji(e) {
-  document.getElementById("msg").value += e.id;
+  chatInput.value += e.id;
 }
 
 // Manage the graphics div
@@ -196,21 +209,12 @@ function outputGifs(gif) {
 
 // Output Stickers to DOM
 function outputStickers(sticker) {
-  const div = document.createElement("div");
-  div.setAttribute("style", "display:flex;flex-direction:column;");
-  const btn = document.createElement("button");
-  btn.setAttribute("class", "btn-flat btn-small");
-  btn.setAttribute("id", `${sticker.title}`);
-  btn.innerText = "Use Me!";
-
-  btn.setAttribute("onclick", "useMe(this)");
-  div.appendChild(btn);
-  div.innerHTML += `<iframe src="${sticker.embed_url}" class="giphy-embed graphics-container-item"></iframe>`;
-  graphics.appendChild(div);
+  graphics.innerHTML += `<img src="${sticker.images.fixed_height_downsampled.url}" onclick="useSticker(this)" class="graphics-container-item" />`;
 }
 
-function useMe(e) {
-  const message = `<iframe src="${e.nextElementSibling.src}" class="giphy-embed graphics-container-item"></iframe>`;
+// Send sticker as a message
+function useSticker(e) {
+  const message = `<img src="${e.src}" class="graphics-container-item" />`;
   socket.emit("chat-message", message);
   graphics.classList.add("no-display");
   graphics.innerHTML = "";
@@ -222,7 +226,7 @@ function noResult() {
   graphics.innerHTML = element;
 }
 
-// Preloader
+// Preloader for waiting to fetch results
 function loadContents() {
   graphics.innerHTML = `
   <div class="preloader-wrapper big active">
@@ -237,3 +241,40 @@ function loadContents() {
       </div>
   `;
 }
+
+//
+//
+//
+// Typing check to display which users are currently typing
+
+const timeOut = new Map();
+chatInput.onkeydown = () => {
+  const id = "user-list-" + window.sessionStorage.getItem("username");
+  socket.emit("typing-start", id);
+};
+
+function typingStop(id) {
+  const element = document.getElementById(id);
+  if (!element) return;
+  element.removeChild(element.lastElementChild);
+  clearTimeout(timeOut.get(id));
+  timeOut.delete(id);
+}
+
+socket.on("typing-start", (id) => {
+  if (timeOut.get(id)) {
+    clearTimeout(timeOut.get(id));
+    timeOut.delete(id);
+    timeOut.set(
+      id,
+      setInterval(() => typingStop(id), 500)
+    );
+    return;
+  }
+  const element = document.getElementById(id);
+  element.innerHTML += `<span class="orange-text"><i> is Typing...</i></span>`;
+  timeOut.set(
+    id,
+    setInterval(() => typingStop(id), 500)
+  );
+});

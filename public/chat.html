@@ -24,11 +24,21 @@
         <h1 class="left">
           <i class="material-icons medium">chat_bubble_outline</i> Chat App
         </h1>
-        <a
-          href="/rooms.html"
-          class="btn waves-effect waves-light right red lighten-1"
-          >Leave Room</a
+        <div
+          class="right"
+          style="display: flex; flex-direction: column; align-items: flex-end"
         >
+          <a
+            href="/rooms.html"
+            class="btn waves-effect waves-light red lighten-1"
+            >Leave Room</a
+          >
+          <span
+            class="flow-text teal-text text-lighten-3"
+            id="chat-room-uname-display"
+            >User</span
+          >
+        </div>
         <div class="clearfix"></div>
       </header>
       <main class="black chat-main">
@@ -37,7 +47,9 @@
           <h2 id="room-name" class="flow-text teal-text">JavaScript</h2>
           <h3 class="flow-text"><i class="fas fa-users"></i> Users</h3>
           <ul id="users" class="teal-text">
-            <li>Brad</li>
+            <li style="font-weight: bold">
+              Brad <span class="orange-text"><i> is Typing...</i></span>
+            </li>
             <li>John</li>
             <li>Mary</li>
             <li>Paul</li>
@@ -64,7 +76,10 @@
             </p>
           </div> -->
         </div>
-        <div class="graphics-container white container no-display" id="graphics-container">
+        <div
+          class="graphics-container white container no-display"
+          id="graphics-container"
+        >
           <!-- <img src="" alt="asdfsadfsda" class="graphics-container-item" /> -->
           <!-- <span class="orange-text flow-text" style="margin:1em">No results found.</span> -->
           <!-- <iframe src="https://giphy.com/embed/JVglf7QjxaZZM2tjfB" class="giphy-embed" allowFullScreen></iframe>
@@ -97,8 +112,8 @@
       };
     </script>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="./js/chat.js"></script> -->
-    <!--JavaScript at end of body for optimized loading
+    <script src="./js/chat.js"></script>
+    <!--JavaScript at end of body for optimized loading -->
     <script type="text/javascript" src="/dist/js/materialize.min.js"></script>
   </body>
 </html>

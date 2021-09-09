@@ -1,1 +1,17 @@
-[{"name":"Public","password":"","public":true,"users":[]},{"name":"Educational","password":"","public":true,"users":[]},{"name":"Gaming","password":"","public":true,"users":[]}]
+[
+  {
+    "name": "Public",
+    "password": "",
+    "public": true,
+    "rules": [],
+    "users": []
+  },
+  {
+    "name": "Educational",
+    "password": "",
+    "public": true,
+    "rules": [],
+    "users": []
+  },
+  { "name": "Gaming", "password": "", "public": true, "rules": [], "users": [] }
+]

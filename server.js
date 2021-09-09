@@ -170,11 +170,18 @@ io.on("connection", (socket) => {
       socket.broadcast.to(user.room).emit("message", message);
     });
   });
-
+  socket.on("typing-start", (id) => {
+    const user = DB.getUser(socket.id);
+    socket.broadcast.to(user.room).emit("typing-start", id);
+  });
   //
   //
   //
   // Listens to command calls
+  socket.on("chat-bot-message", (message) => {
+    const formattedMessage = messageFormat("Chat Bot", message);
+    socket.emit("message", formattedMessage);
+  });
   socket.on("search-gifs", (query) => {
     externalApi.searchGifs(query, ({ data }) => {
       socket.emit("search-gifs", data);
