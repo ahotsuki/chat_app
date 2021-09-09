@@ -1,11 +1,9 @@
 @route=http://localhost:3000/api
 
-GET {{route}}/get_users
+POST {{route}}/rooms
+content-type: application/json
 
-###
-
-GET {{route}}/get_rooms
-
-###
-
-GET {{route}}/get_messages
+{
+    "name": "sample",
+    "password": "sample password"
+}

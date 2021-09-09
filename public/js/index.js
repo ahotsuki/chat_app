@@ -1,3 +1,5 @@
+if (window.sessionStorage.username) window.location.href = "/rooms.html";
+
 const uname = document.getElementById("username");
 const btn = document.getElementById("index-submit-btn");
 

@@ -14,6 +14,7 @@ const io = socketio(server);
 const messageFormat = require("./utils/message");
 const DB = require("./db/db");
 const externalApi = require("./db/external");
+const { response } = require("express");
 
 app.use(express.json());
 
@@ -24,34 +25,35 @@ app.use(
 );
 
 // Username of auto-generated messages
-const ADMIN = "Admin";
+// const ADMIN = "Admin";
 
 // Collections
-let USERS = []; // { id, name, room }
-let ROOMS = [
-  {
-    name: "Public",
-    password: "",
-    public: true,
-    users: [],
-  },
-  {
-    name: "Educational",
-    password: "",
-    public: true,
-    users: [],
-  },
-  {
-    name: "Gaming",
-    password: "",
-    public: true,
-    users: [],
-  },
-]; // { name, password, public:(true or false), users: [{id}]}
-let MESSAGES = []; // {room, messages:[{ messageFormat }]}
+// let USERS = []; // { id, name, room }
+// let ROOMS = [
+//   {
+//     name: "Public",
+//     password: "",
+//     public: true,
+//     users: [],
+//   },
+//   {
+//     name: "Educational",
+//     password: "",
+//     public: true,
+//     users: [],
+//   },
+//   {
+//     name: "Gaming",
+//     password: "",
+//     public: true,
+//     users: [],
+//   },
+// ]; // { name, password, public:(true or false), users: [{id}]}
+// let MESSAGES = []; // {room, messages:[{ messageFormat }]}
 
 // Api endpoints
 app.get("/api/rooms", (req, res) => {
+  const ROOMS = DB.getRooms();
   let list = [];
   ROOMS.forEach((element) => {
     list.push({
@@ -63,6 +65,7 @@ app.get("/api/rooms", (req, res) => {
   res.send(list);
 });
 app.get("/api/rooms/:name", (req, res) => {
+  const ROOMS = DB.getRooms();
   const room = req.params.name;
   const password = req.headers.password;
   const index = ROOMS.findIndex((item) => item.name === room);
@@ -77,14 +80,8 @@ app.post("/api/rooms", (req, res) => {
     password: room.password,
     users: [],
   };
-  ROOMS.push(format);
-  res.send(format);
+  DB.createRoom(format, (result) => res.send(result));
 });
-
-// Endpoints for testing purposes
-app.get("/api/get_users", (req, res) => res.send(USERS));
-app.get("/api/get_rooms", (req, res) => res.send(ROOMS));
-app.get("/api/get_messages", (req, res) => res.send(MESSAGES));
 
 // SocketIO connection
 io.on("connection", (socket) => {
@@ -98,39 +95,38 @@ io.on("connection", (socket) => {
   //
   // When a user joins a room
   socket.on("joinRoom", (user) => {
-    // Saves socket id and username to the USERS collection
-    USERS.push({
-      id: socket.id,
-      name: user.username,
-      room: user.room,
-    });
+    const currentUser = { id: socket.id, name: user.username, room: user.room };
 
-    // Saves roomname with users' socket ids to the ROOM collection
-    let roomIndex = ROOMS.findIndex((room) => room.name === user.room);
-    if (roomIndex === -1) {
-      ROOMS.push({
-        name: user.room,
-        users: [socket.id],
-      });
-    } else {
-      ROOMS[roomIndex].users.push(socket.id);
-    }
+    // Saves socket id and username to the USERS collection
+    DB.createUser(currentUser);
+
+    // Saves to roomname with user socket id to the ROOM collection
+    DB.updateRoomAdd(currentUser);
 
     // Joins the user to the room
     socket.join(user.room);
 
     // Displays the previous messages if room has already existed before the user joins
-    const messageIndex = MESSAGES.findIndex((item) => item.room === user.room);
-    if (messageIndex !== -1) {
-      MESSAGES[messageIndex].messages.forEach((element) => {
+    DB.getMessage(currentUser.room, (result) => {
+      result.messages.forEach((element) => {
         socket.emit("message", element);
       });
-    }
+    });
 
     // Welcome message
     socket.emit(
       "message",
-      messageFormat(ADMIN, `Welcome ${user.username}! Happy chatting!`)
+      messageFormat(
+        ADMIN,
+        `Welcome <span class="orange-text">${user.username}</span>! Happy chatting!`
+      )
+    );
+    socket.emit(
+      "message",
+      messageFormat(
+        "Chat Bot",
+        `Enter <span class="orange-text">"/"</span> for a list of commands.`
+      )
     );
 
     // Broadcast to other users when a user connects
@@ -138,18 +134,23 @@ io.on("connection", (socket) => {
       .to(user.room)
       .emit(
         "message",
-        messageFormat(ADMIN, `${user.username} has joined the chat`)
+        messageFormat(
+          ADMIN,
+          `<span class="orange-text">${user.username}</span> has joined the chat`
+        )
       );
 
     // Broadcast configurations to everyone
-    roomIndex = ROOMS.findIndex((room) => room.name === user.room);
+    const USERS = DB.getUsers();
+    const ROOMS = DB.getRooms();
+    const roomIndex = ROOMS.findIndex((room) => room.name === user.room);
     let userList = [];
     ROOMS[roomIndex].users.forEach((element) => {
       const index = USERS.findIndex((item) => item.id === element);
       userList.push(USERS[index].name);
     });
     io.to(user.room).emit("configurations", {
-      name: ROOMS[roomIndex].name,
+      name: user.room,
       users: userList,
     });
     socket.broadcast.to("__refresh_room").emit("refresh");
@@ -160,35 +161,37 @@ io.on("connection", (socket) => {
   //
   // Listen to chat messages
   socket.on("chat-message", (message) => {
-    const index = USERS.findIndex((item) => item.id === socket.id);
-    const user = USERS[index];
-
+    const user = DB.getUser(socket.id);
     const formattedMessage = messageFormat(user.name, message);
 
-    // Checks if the room has recorded messages
-    const messageIndex = MESSAGES.findIndex((item) => item.room === user.room);
-    if (messageIndex === -1) {
-      MESSAGES.push({
-        room: user.room,
-        messages: [formattedMessage],
-      });
-    } else {
-      MESSAGES[messageIndex].messages.push(formattedMessage);
-    }
-
-    socket.emit("message", { ...formattedMessage, username: "You" });
-    socket.broadcast.to(user.room).emit("message", formattedMessage);
+    // Sends the message to self and everyone
+    DB.createMessage(user.room, formattedMessage, (message) => {
+      socket.emit("message", { ...message, username: "You" });
+      socket.broadcast.to(user.room).emit("message", message);
+    });
   });
 
   //
   //
   //
   // Listens to command calls
-  socket.on("search-gifs", async (query) => {
-    externalApi.searchGifs(query, (response) => {
-      socket.emit("search-gifs", response.data);
+  socket.on("search-gifs", (query) => {
+    externalApi.searchGifs(query, ({ data }) => {
+      socket.emit("search-gifs", data);
     });
-    // socket.emit("search-gifs", DB.searchGifs());
+  });
+  socket.on("search-stickers", (query) => {
+    externalApi.searchStickers(query, ({ data }) => {
+      socket.emit("search-stickers", data);
+    });
+  });
+  socket.on("get-all-emojis", () => {
+    externalApi.getAllEmojis((data) => socket.emit("get-all-emojis", data));
+  });
+  socket.on("search-emojis", (query) => {
+    externalApi.searchEmojis(query, (data) =>
+      socket.emit("search-emojis", data)
+    );
   });
 
   //
@@ -196,43 +199,38 @@ io.on("connection", (socket) => {
   //
   // When a user leaves a room
   socket.on("disconnect", () => {
-    const userIndex = USERS.findIndex((item) => item.id === socket.id);
+    // Removes user to USERS collection
+    const user = DB.deleteUser(socket.id);
+    if (!user) return;
 
-    if (userIndex === -1) return;
+    DB.updateRoomDelete(user, (room) => {
+      if (room.users.length === 0) {
+        if (!room.public) {
+          DB.deleteRoom(room);
+        }
+        DB.deleteMessageCollection(room.name);
+      }
 
-    const roomIndex = ROOMS.findIndex(
-      (item) => item.name === USERS[userIndex].room
-    );
+      socket.broadcast
+        .to(user.room)
+        .emit(
+          "message",
+          messageFormat(ADMIN, `${user.name} has left the chat.`)
+        );
 
-    const user = USERS.splice(userIndex, 1)[0];
-
-    if (ROOMS[roomIndex].users.length && !ROOMS[roomIndex].public) {
-      const r = ROOMS.splice(roomIndex, 1);
-      const index = MESSAGES.findIndex((item) => item.room === r.name);
-      MESSAGES.splice(index, 1);
-    } else {
-      const index = ROOMS[roomIndex].users.findIndex(
-        (item) => item === user.id
-      );
-      ROOMS[roomIndex].users.splice(index, 1);
-    }
-
-    socket.broadcast
-      .to(user.room)
-      .emit("message", messageFormat(ADMIN, `${user.name} has left the chat.`));
-
-    // Broadcast configurations to everyone
-    if (!ROOMS[roomIndex]) return;
-    let userList = [];
-    ROOMS[roomIndex].users.forEach((element) => {
-      const index = USERS.findIndex((item) => item.id === element);
-      userList.push(USERS[index].name);
+      // Broadcast configurations to everyone
+      let userList = [];
+      const USERS = DB.getUsers();
+      room.users.forEach((element) => {
+        const index = USERS.findIndex((item) => item.id === element);
+        userList.push(USERS[index].name);
+      });
+      io.to(user.room).emit("configurations", {
+        name: user.room,
+        users: userList,
+      });
+      socket.broadcast.to("__refresh_room").emit("refresh");
     });
-    io.to(user.room).emit("configurations", {
-      name: ROOMS[roomIndex].name,
-      users: userList,
-    });
-    socket.broadcast.to("__refresh_room").emit("refresh");
   });
 });
 

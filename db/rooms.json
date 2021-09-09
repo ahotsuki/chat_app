@@ -1,0 +1,5 @@
+[
+  { "name": "Public", "password": "", "public": true, "users": [] },
+  { "name": "Educational", "password": "", "public": true, "users": [] },
+  { "name": "Gaming", "password": "", "public": true, "users": [] }
+]

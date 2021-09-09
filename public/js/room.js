@@ -28,6 +28,8 @@ document.addEventListener("DOMContentLoaded", function () {
       roomDisplay.innerHTML = "";
       list.forEach((element) => outputRoom(element));
     });
+  document.getElementById("room-username-display").innerHTML =
+    window.sessionStorage.getItem("username");
 });
 
 createRoomBtn.onclick = () => {

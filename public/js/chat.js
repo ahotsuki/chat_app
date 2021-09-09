@@ -47,8 +47,16 @@ chatForm.addEventListener("submit", (e) => {
 
   if (msg === "/") {
     const commands = `
-      <span class="orange-text">/gifs</span> [your search keyword here] <br>
-        - Gives you a list of gifs.
+      <span class="orange-text">/gifs</span> <span class="blue-text text-lighten-4">[your search keyword here]</span> <br>
+        - Gives you a list of gifs. <br>
+      <span class="orange-text">/stickers</span> <span class="blue-text text-lighten-4">[your search keyword here]</span> <br>
+      - Gives you a list of stickers. <br>
+      <span class="orange-text">/emojis</span> <br>
+      - Gives you a list of emojis. <br>
+      <span class="orange-text">/emojis</span> <span class="blue-text text-lighten-4">[your search keyword here]</span> <br>
+      - Search a list of emojis with your keyword. <br>
+      <span class="orange-text">/whisper</span> <span class="blue-text text-lighten-4">[your search keyword here]</span> <br>
+      - Privately send a message to a user in this room. <br>
     `;
 
     e.target.elements.msg.value = "";
@@ -66,9 +74,26 @@ chatForm.addEventListener("submit", (e) => {
     const query = msgArr.join(" ").trim();
     e.target.elements.msg.value = "";
     if (cmd === "/gifs") {
-      // For gif searching
-      socket.emit("search-gifs", query);
       graphics.classList.remove("no-display");
+      loadContents();
+      if (query === "") return noResult();
+      socket.emit("search-gifs", query);
+      return;
+    } else if (cmd === "/stickers") {
+      graphics.classList.remove("no-display");
+      loadContents();
+      if (query === "") return noResult();
+      socket.emit("search-stickers", query);
+      return;
+    } else if (cmd === "/emojis") {
+      graphics.classList.remove("no-display");
+      loadContents();
+      if (query === "") return socket.emit("get-all-emojis");
+      socket.emit("search-emojis", query);
+      return;
+    } else if (cmd === "/whisper") {
+      alert(query);
+      // socket.emit("whisper-message", query);
       return;
     } else {
       return outputMessage({
@@ -90,13 +115,51 @@ chatForm.addEventListener("submit", (e) => {
 // Display the list of searched gifs
 socket.on("search-gifs", ({ data }) => {
   graphics.innerHTML = "";
-  data.forEach((item) => outputGifs(item));
+  if (data.length > 0) {
+    data.forEach((item) => outputGifs(item));
+    return;
+  }
+  noResult();
 });
+
+// Display the list of searched stickers
+socket.on("search-stickers", ({ data }) => {
+  graphics.innerHTML = "";
+  if (data.length > 0) {
+    data.forEach((item) => outputStickers(item));
+    return;
+  }
+  noResult();
+});
+
+// Display the list of all emojis
+socket.on("get-all-emojis", (data) => {
+  if (!data) return noResult();
+  graphics.innerHTML = "";
+  data.forEach((item) => {
+    graphics.innerHTML += `<a onclick="displayEmoji(this)" class="btn-flat" id="${item.character}">${item.character}</a>`;
+  });
+});
+
+// Display the list of searched emojis
+socket.on("search-emojis", (data) => {
+  if (!data) return noResult();
+  graphics.innerHTML = "";
+  data.forEach((item) => {
+    graphics.innerHTML += `<a onclick="displayEmoji(this)" class="btn-flat" id="${item.character}">${item.character}</a>`;
+  });
+});
+
+// Outputs emoji to chat box
+function displayEmoji(e) {
+  document.getElementById("msg").value += e.id;
+}
 
 // Manage the graphics div
 document.addEventListener("click", (e) => {
   if (graphics !== e.target && !graphics.contains(e.target)) {
     graphics.classList.add("no-display");
+    graphics.innerHTML = "";
   }
 });
 
@@ -135,4 +198,48 @@ function outputGifs(gif) {
     graphics.innerHTML = "";
   };
   graphics.appendChild(img);
+}
+
+// Output Stickers to DOM
+function outputStickers(sticker) {
+  const div = document.createElement("div");
+  div.setAttribute("style", "display:flex;flex-direction:column;");
+  const btn = document.createElement("button");
+  btn.setAttribute("class", "btn-flat btn-small");
+  btn.setAttribute("id", `${sticker.title}`);
+  btn.innerText = "Use Me!";
+
+  btn.setAttribute("onclick", "useMe(this)");
+  div.appendChild(btn);
+  div.innerHTML += `<iframe src="${sticker.embed_url}" class="giphy-embed graphics-container-item"></iframe>`;
+  graphics.appendChild(div);
+}
+
+function useMe(e) {
+  const message = `<iframe src="${e.nextElementSibling.src}" class="giphy-embed graphics-container-item"></iframe>`;
+  socket.emit("chat-message", message);
+  graphics.classList.add("no-display");
+  graphics.innerHTML = "";
+}
+
+// No command result
+function noResult() {
+  const element = `<span class="orange-text flow-text" style="margin:1em">No result found.</span>`;
+  graphics.innerHTML = element;
+}
+
+// Preloader
+function loadContents() {
+  graphics.innerHTML = `
+  <div class="preloader-wrapper big active">
+      <div class="spinner-layer spinner-blue">
+        <div class="circle-clipper left">
+          <div class="circle"></div>
+        </div><div class="gap-patch">
+          <div class="circle"></div>
+        </div><div class="circle-clipper right">
+          <div class="circle"></div>
+        </div>
+      </div>
+  `;
 }
