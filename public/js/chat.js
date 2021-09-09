@@ -55,8 +55,6 @@ chatForm.addEventListener("submit", (e) => {
       - Gives you a list of emojis. <br>
       <span class="orange-text">/emojis</span> <span class="blue-text text-lighten-4">[your search keyword here]</span> <br>
       - Search a list of emojis with your keyword. <br>
-      <span class="orange-text">/whisper</span> <span class="blue-text text-lighten-4">[your search keyword here]</span> <br>
-      - Privately send a message to a user in this room. <br>
     `;
 
     e.target.elements.msg.value = "";
@@ -90,10 +88,6 @@ chatForm.addEventListener("submit", (e) => {
       loadContents();
       if (query === "") return socket.emit("get-all-emojis");
       socket.emit("search-emojis", query);
-      return;
-    } else if (cmd === "/whisper") {
-      alert(query);
-      // socket.emit("whisper-message", query);
       return;
     } else {
       return outputMessage({
